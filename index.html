@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADM GURUKU - Administrasi Guru Mata Pelajaran</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Vue 3 Global Build -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SheetJS (XLSX) for Excel File Upload and Generation -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        [v-cloak] { display: none !important; }
+        
+        /* Custom scrollbar for data-heavy tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <div id="app" v-cloak class="min-h-full flex flex-col">
+
+        <!-- Toast Notification -->
+        <div v-if="toastMessage" 
+             class="fixed top-5 right-5 z-50 flex items-center p-4 mb-4 text-sm text-slate-800 bg-white rounded-xl shadow-2xl border border-slate-100 transition-all duration-300 transform translate-y-0">
+            <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-emerald-500 bg-emerald-100 rounded-lg mr-3">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="font-medium text-slate-700 mr-4">{{ toastMessage }}</div>
+            <button @click="toastMessage = ''" class="ml-auto text-slate-400 hover:text-slate-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- LOGIN PAGE -->
+        <div v-if="!isLoggedIn" class="min-h-screen bg-slate-100 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+                <div class="flex justify-center mb-4">
+                    <div class="w-28 h-28 rounded-2xl bg-white border-2 border-brand-100 p-2 shadow-lg flex items-center justify-center overflow-hidden">
+                        <img src="https://lh3.googleusercontent.com/d/1oO6FIc-KYl2lHYB4eAo0uruCw41M9LPJ" 
+                             alt="Logo ADM GURUKU" 
+                             class="max-w-full max-h-full object-contain"
+                             @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'">
+                        <div class="hidden text-brand-600 text-4xl font-bold items-center justify-center">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                    </div>
+                </div>
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">ADM GURUKU</h2>
+                <p class="mt-1 text-sm font-bold text-brand-600 uppercase tracking-wider">Administrasi Guru Mata Pelajaran</p>
+                <p class="text-xs text-slate-500 font-semibold mt-0.5">{{ schoolSettings.schoolName }}</p>
+            </div>
+
+            <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                <div class="bg-white py-8 px-6 shadow-xl border border-slate-200/80 rounded-2xl sm:px-10">
+                    <form class="space-y-5" @submit.prevent="handleLogin">
+                        <div>
+                            <label for="username" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                Username
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <input id="username" v-model="loginForm.username" type="text" required 
+                                       class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition"
+                                       placeholder="Masukkan Username">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="password" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <input id="password" v-model="loginForm.password" :type="showPassword ? 'text' : 'password'" required 
+                                       class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition"
+                                       placeholder="Masukkan Password">
+                                <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="loginError" class="rounded-xl bg-rose-50 p-3 border border-rose-200 text-xs text-rose-600 flex items-center gap-2 font-medium">
+                            <i class="fas fa-exclamation-circle text-rose-500"></i>
+                            <span>{{ loginError }}</span>
+                        </div>
+
+                        <div>
+                            <button type="submit" 
+                                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition">
+                                <i class="fas fa-sign-in-alt mr-2"></i> Masuk Aplikasi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN APPLICATION WORKSPACE -->
+        <div v-else class="flex h-screen bg-slate-100 overflow-hidden">
+
+            <!-- Mobile Drawer Backdrop -->
+            <div v-if="isMobileMenuOpen" 
+                 @click="isMobileMenuOpen = false" 
+                 class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"></div>
+
+            <!-- Sidebar Navigation -->
+            <aside :class="[
+                'fixed inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 ease-in-out lg:static',
+                isMobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0',
+                isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+            ]">
+                <!-- Brand Header -->
+                <div class="h-16 flex items-center justify-between px-4 bg-slate-950/60 border-b border-slate-800">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white flex-shrink-0 shadow-md">
+                            <i class="fas fa-graduation-cap text-base"></i>
+                        </div>
+                        <div v-show="!isSidebarCollapsed || isMobileMenuOpen" class="whitespace-nowrap transition-opacity">
+                            <h1 class="font-extrabold text-white text-base leading-tight tracking-wide">ADM GURUKU</h1>
+                            <p class="text-[10px] text-brand-400 font-semibold uppercase tracking-wider truncate max-w-[130px]" :title="schoolSettings.schoolName">
+                                {{ schoolSettings.schoolName }}
+                            </p>
+                        </div>
+                    </div>
+                    <button @click="isSidebarCollapsed = !isSidebarCollapsed" class="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                        <i :class="isSidebarCollapsed ? 'fas fa-indent' : 'fas fa-outdent'"></i>
+                    </button>
+                    <button @click="isMobileMenuOpen = false" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+                    <a v-for="item in menuItems" :key="item.id"
+                       @click="activeTab = item.id; isMobileMenuOpen = false"
+                       :class="[
+                           'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition cursor-pointer group',
+                           activeTab === item.id 
+                               ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30' 
+                               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
+                       ]">
+                        <i :class="[item.icon, 'text-lg w-6 text-center group-hover:scale-110 transition-transform']"></i>
+                        <span v-show="!isSidebarCollapsed || isMobileMenuOpen" class="truncate">{{ item.label }}</span>
+                    </a>
+                </nav>
+
+                <!-- Admin Footer -->
+                <div class="p-3 bg-slate-950/40 border-t border-slate-800/80">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold border border-slate-700 flex-shrink-0">
+                                {{ adminProfile.name.charAt(0) }}
+                            </div>
+                            <div v-show="!isSidebarCollapsed || isMobileMenuOpen" class="overflow-hidden">
+                                <p class="text-xs font-bold text-white truncate">{{ adminProfile.name }}</p>
+                                <p class="text-[10px] text-slate-400 truncate">@{{ adminProfile.username }}</p>
+                            </div>
+                        </div>
+                        <button @click="handleLogout" 
+                                v-show="!isSidebarCollapsed || isMobileMenuOpen"
+                                title="Keluar dari Aplikasi" 
+                                class="p-2 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+                
+                <!-- Top Navigation Header -->
+                <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 z-10 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <button @click="isMobileMenuOpen = true" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 focus:outline-none">
+                            <i class="fas fa-bars text-lg"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 capitalize tracking-tight flex items-center gap-2">
+                                <span>{{ currentTabTitle }}</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 hidden sm:block">
+                                {{ schoolSettings.schoolName }} &bull; TP {{ schoolSettings.academicYear }} (Semester {{ schoolSettings.semester }})
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Global Class Filter -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-xs">
+                            <span class="font-bold text-slate-500 ml-1 hidden sm:inline"><i class="fas fa-filter mr-1"></i> Kelas:</span>
+                            <select v-model="selectedClass" class="bg-white text-slate-800 font-bold py-1 px-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer">
+                                <option value="ALL">Semua Kelas (IX.A - IX.H)</option>
+                                <option v-for="c in classes" :key="c" :value="c">Kelas {{ c }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Main Content Body -->
+                <main class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50 custom-scrollbar">
+
+                    <!-- TAB 1: DASBOR -->
+                    <div v-if="activeTab === 'dashboard'" class="space-y-6">
+                        <!-- Welcome Banner -->
+                        <div class="bg-gradient-to-r from-brand-600 via-brand-700 to-indigo-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                            <div class="relative z-10 sm:max-w-xl">
+                                <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
+                                    Administrasi Guru Mata Pelajaran
+                                </span>
+                                <h2 class="text-2xl sm:text-3xl font-black">Selamat Datang, {{ adminProfile.name }}!</h2>
+                                <p class="text-brand-100 text-xs sm:text-sm mt-1 leading-relaxed">
+                                    Kelola presensi, rekapitulasi nilai tugas & ujian, serta laporan data siswa {{ schoolSettings.schoolName }} secara real-time.
+                                </p>
+                            </div>
+                            <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                                <i class="fas fa-graduation-cap text-[220px]"></i>
+                            </div>
+                        </div>
+
+                        <!-- Stats Cards -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Siswa</p>
+                                    <h3 class="text-2xl font-black text-slate-800 mt-1">{{ totalStudents }} <span class="text-xs font-normal text-slate-500">Siswa</span></h3>
+                                    <p class="text-[11px] text-emerald-600 font-semibold mt-1"><i class="fas fa-check-circle"></i> 8 Rombel (IX.A - IX.H)</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl font-bold">
+                                    <i class="fas fa-user-graduate"></i>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rata-rata Kehadiran</p>
+                                    <h3 class="text-2xl font-black text-emerald-600 mt-1">{{ overallAttendanceRate }}%</h3>
+                                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Presensi Hari Ini</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
+                                    <i class="fas fa-clipboard-user"></i>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Siswa Tuntas KKTP</p>
+                                    <h3 class="text-2xl font-black text-brand-600 mt-1">{{ passedCount }} <span class="text-xs font-normal text-slate-500">/ {{ filteredStudents.length }}</span></h3>
+                                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Batas KKTP: {{ schoolSettings.kktp }}</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl font-bold">
+                                    <i class="fas fa-award"></i>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rata-rata Nilai Akhir</p>
+                                    <h3 class="text-2xl font-black text-amber-500 mt-1">{{ overallAverageGrade }}</h3>
+                                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Skala 0 - 100</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Analytics -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                                <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-chart-pie text-brand-600"></i> Distribusi Ketuntasan KKTP
+                                </h3>
+                                <div class="relative h-64 sm:h-72 w-full flex items-center justify-center">
+                                    <canvas id="gradeDistributionChart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                                <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-chart-bar text-brand-600"></i> Rekapitulasi Presensi Kehadiran
+                                </h3>
+                                <div class="relative h-64 sm:h-72 w-full flex items-center justify-center">
+                                    <canvas id="attendanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rekapitulasi Kehadiran Per-Siswa -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                        <i class="fas fa-user-check text-brand-600"></i> Rekapitulasi Kehadiran Siswa
+                                    </h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">Rincian status dan akumulasi persentase kehadiran siswa secara individual.</p>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div class="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-xl">
+                                        <i class="fas fa-filter text-brand-600 text-xs"></i>
+                                        <label for="dash-class-filter-alt" class="text-xs font-bold text-slate-600">Kelas:</label>
+                                        <select id="dash-class-filter-alt" v-model="selectedClass" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                                            <option value="ALL">Semua Kelas (IX.A - IX.H)</option>
+                                            <option v-for="c in classes" :key="c" :value="c">Kelas {{ c }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-xl">
+                                        <i class="fas fa-calendar-day text-brand-600 text-xs"></i>
+                                        <label for="dash-att-date-alt" class="text-xs font-bold text-slate-600">Tanggal:</label>
+                                        <input id="dash-att-date-alt" type="date" v-model="selectedAttendanceDate" 
+                                               class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Search Filter -->
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="relative flex-1 max-w-md">
+                                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input v-model="searchQuery" type="text" placeholder="Cari NISN atau Nama Siswa..." 
+                                           class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                </div>
+                                <div class="text-xs font-semibold text-slate-500">
+                                    Menampilkan {{ paginatedDashStudents.length }} dari {{ filteredStudents.length }} Siswa
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto custom-scrollbar">
+                                <table class="w-full text-left border-collapse min-w-[700px]">
+                                    <thead class="bg-slate-50 text-slate-600 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-2.5 px-3 text-center w-12">No</th>
+                                            <th class="py-2.5 px-3 w-28">NISN</th>
+                                            <th class="py-2.5 px-3 min-w-[160px]">Nama Siswa</th>
+                                            <th class="py-2.5 px-3 text-center w-20">Kelas</th>
+                                            <th class="py-2.5 px-3 text-center w-28 bg-brand-50/50 text-brand-800">Status ({{ formatDate(selectedAttendanceDate) }})</th>
+                                            <th class="py-2.5 px-3 text-center w-12 text-emerald-600">H</th>
+                                            <th class="py-2.5 px-3 text-center w-12 text-amber-600">S</th>
+                                            <th class="py-2.5 px-3 text-center w-12 text-blue-600">I</th>
+                                            <th class="py-2.5 px-3 text-center w-12 text-rose-600">A</th>
+                                            <th class="py-2.5 px-3 text-center min-w-[140px]">Persentase</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs font-medium">
+                                        <tr v-for="(student, idx) in paginatedDashStudents" :key="student.id" class="hover:bg-slate-50/80 transition">
+                                            <td class="py-2.5 px-3 text-center text-slate-400 font-bold">
+                                                {{ (dashCurrentPage - 1) * dashPageSize + idx + 1 }}
+                                            </td>
+                                            <td class="py-2.5 px-3 font-mono text-slate-600">{{ student.nisn }}</td>
+                                            <td class="py-2.5 px-3 font-bold text-slate-800">{{ student.name }}</td>
+                                            <td class="py-2.5 px-3 text-center font-bold text-slate-600">
+                                                <span class="px-2 py-0.5 bg-slate-100 border rounded-md">{{ student.class }}</span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-center font-extrabold">
+                                                <span :class="['px-2.5 py-1 rounded-lg text-xs font-black inline-block', statusColorClass(getAttendanceStatus(student, selectedAttendanceDate))]">
+                                                    {{ getAttendanceStatus(student, selectedAttendanceDate) }}
+                                                </span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-center font-bold text-emerald-600">{{ getStudentAttendanceCounts(student).h }}</td>
+                                            <td class="py-2.5 px-3 text-center font-bold text-amber-600">{{ getStudentAttendanceCounts(student).s }}</td>
+                                            <td class="py-2.5 px-3 text-center font-bold text-blue-600">{{ getStudentAttendanceCounts(student).i }}</td>
+                                            <td class="py-2.5 px-3 text-center font-bold text-rose-600">{{ getStudentAttendanceCounts(student).a }}</td>
+                                            <td class="py-2.5 px-3">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                                        <div class="bg-emerald-500 h-2 rounded-full transition-all duration-300" :style="{ width: getStudentAttendanceCounts(student).percentage + '%' }"></div>
+                                                    </div>
+                                                    <span class="text-xs font-extrabold text-slate-700 w-10 text-right">{{ getStudentAttendanceCounts(student).percentage }}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="paginatedDashStudents.length === 0">
+                                            <td colspan="10" class="py-12 text-center text-slate-400">
+                                                <i class="fas fa-folder-open text-3xl mb-2 text-slate-300 block"></i>
+                                                <span>Belum ada data siswa. Silakan unggah data melalui menu <b>Data Siswa</b>.</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: DAFTAR KEHADIRAN -->
+                    <div v-if="activeTab === 'attendance'" class="space-y-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-200">
+                                    <i class="fas fa-calendar-alt text-brand-600 text-sm"></i>
+                                    <label for="att-date-picker" class="text-xs font-bold text-slate-700">Tanggal Absensi:</label>
+                                    <input id="att-date-picker" type="date" v-model="selectedAttendanceDate" 
+                                           class="bg-white text-xs font-bold text-slate-800 border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer">
+                                </div>
+                                <button @click="markAllPresent" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-200">
+                                    <i class="fas fa-check-double"></i> Tandai Semua Hadir
+                                </button>
+                            </div>
+
+                            <div class="relative flex-1 max-w-xs">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input v-model="searchQuery" type="text" placeholder="Cari Siswa..." 
+                                       class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto custom-scrollbar">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 text-slate-600 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-3 px-4 text-center w-12">No</th>
+                                            <th class="py-3 px-4 w-28">NISN</th>
+                                            <th class="py-3 px-4">Nama Siswa</th>
+                                            <th class="py-3 px-4 text-center w-20">Kelas</th>
+                                            <th class="py-3 px-4 text-center w-48 bg-brand-50/50 text-brand-800">
+                                                Status Presensi ({{ formatDate(selectedAttendanceDate) }})
+                                            </th>
+                                            <th class="py-3 px-4 text-center w-32">Rekap Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs font-medium">
+                                        <tr v-for="(student, idx) in paginatedAttendanceStudents" :key="student.id" class="hover:bg-slate-50 transition">
+                                            <td class="py-3 px-4 text-center text-slate-400 font-bold">
+                                                {{ (attendanceCurrentPage - 1) * attendancePageSize + idx + 1 }}
+                                            </td>
+                                            <td class="py-3 px-4 font-mono text-slate-600">{{ student.nisn }}</td>
+                                            <td class="py-3 px-4 font-bold text-slate-800">{{ student.name }}</td>
+                                            <td class="py-3 px-4 text-center">
+                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-700 font-bold rounded">{{ student.class }}</span>
+                                            </td>
+                                            <td class="py-3 px-4 text-center bg-slate-50/30">
+                                                <div class="inline-flex rounded-lg p-1 bg-slate-200/70 gap-1">
+                                                    <button v-for="st in ['H', 'S', 'I', 'A']" :key="st"
+                                                            @click="setAttendanceStatus(student, selectedAttendanceDate, st)"
+                                                            :class="[
+                                                                'px-2.5 py-1 text-[11px] font-black rounded-md transition-all',
+                                                                getAttendanceStatus(student, selectedAttendanceDate) === st
+                                                                    ? statusColorClass(st) + ' shadow-sm scale-105'
+                                                                    : 'text-slate-600 hover:bg-slate-300/50'
+                                                            ]">
+                                                        {{ st }}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-4 text-center">
+                                                <div class="text-[11px] font-bold text-slate-600">
+                                                    <span class="text-emerald-600">H:{{ getStudentAttendanceCounts(student).h }}</span> &bull; 
+                                                    <span class="text-amber-600">S:{{ getStudentAttendanceCounts(student).s }}</span> &bull; 
+                                                    <span class="text-blue-600">I:{{ getStudentAttendanceCounts(student).i }}</span> &bull; 
+                                                    <span class="text-rose-600">A:{{ getStudentAttendanceCounts(student).a }}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="paginatedAttendanceStudents.length === 0">
+                                            <td colspan="6" class="py-12 text-center text-slate-400">
+                                                <i class="fas fa-user-slash text-3xl mb-2 text-slate-300 block"></i>
+                                                <span>Belum ada data siswa untuk dicatat presensinya.</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DAFTAR NILAI -->
+                    <div v-if="activeTab === 'grades'" class="space-y-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="relative flex-1 max-w-md">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input v-model="searchQuery" type="text" placeholder="Cari Nama Siswa atau NISN..." 
+                                       class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div class="text-xs text-slate-500 font-semibold">
+                                Rumus Nilai Akhir: <span class="font-bold text-slate-800">{{ schoolSettings.weightTugas }}% Tugas + {{ schoolSettings.weightUTS }}% UTS + {{ schoolSettings.weightUAS }}% UAS</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto custom-scrollbar">
+                                <table class="w-full text-left border-collapse min-w-[1200px]">
+                                    <thead class="bg-slate-50 text-slate-600 text-[10px] font-extrabold uppercase tracking-wider border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-3 px-3 text-center w-10">No</th>
+                                            <th class="py-3 px-3 min-w-[150px]">Nama Siswa</th>
+                                            <th class="py-3 px-3 text-center w-16">Kelas</th>
+                                            <th v-for="t in 10" :key="t" class="py-3 px-1 text-center w-10 bg-indigo-50/40 text-brand-700">T{{ t }}</th>
+                                            <th class="py-3 px-2 text-center w-14 bg-indigo-100/60 text-indigo-900">Rata T</th>
+                                            <th class="py-3 px-2 text-center w-12 bg-amber-50/60 text-amber-900">UTS</th>
+                                            <th class="py-3 px-2 text-center w-12 bg-amber-50/60 text-amber-900">UAS</th>
+                                            <th class="py-3 px-3 text-center w-16 bg-brand-600 text-white font-black">NA</th>
+                                            <th class="py-3 px-3 text-center w-28">Status KKTP</th>
+                                            <th class="py-3 px-3 text-center w-12">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs font-medium">
+                                        <tr v-for="(student, idx) in paginatedStudents" :key="student.id" class="hover:bg-slate-50 transition">
+                                            <td class="py-2.5 px-3 text-center text-slate-400 font-bold">
+                                                {{ (currentPage - 1) * pageSize + idx + 1 }}
+                                            </td>
+                                            <td class="py-2.5 px-3 font-bold text-slate-800">{{ student.name }}</td>
+                                            <td class="py-2.5 px-3 text-center">
+                                                <span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 font-bold rounded text-[10px]">{{ student.class }}</span>
+                                            </td>
+                                            <td v-for="(val, tIdx) in student.tugas" :key="tIdx" class="py-2.5 px-1 text-center font-mono text-[11px] text-slate-600">
+                                                {{ val }}
+                                            </td>
+                                            <td class="py-2.5 px-2 text-center font-bold text-indigo-700 bg-indigo-50/30">
+                                                {{ calculateAvgTugas(student.tugas) }}
+                                            </td>
+                                            <td class="py-2.5 px-2 text-center font-mono text-slate-700 bg-amber-50/20">{{ student.uts }}</td>
+                                            <td class="py-2.5 px-2 text-center font-mono text-slate-700 bg-amber-50/20">{{ student.uas }}</td>
+                                            <td class="py-2.5 px-3 text-center font-black text-sm text-brand-700 bg-brand-50/60">
+                                                {{ calculateNA(student) }}
+                                            </td>
+                                            <td class="py-2.5 px-3 text-center">
+                                                <span :class="[
+                                                    'px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider',
+                                                    calculateNA(student) >= schoolSettings.kktp 
+                                                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
+                                                        : 'bg-rose-100 text-rose-700 border border-rose-300'
+                                                ]">
+                                                    {{ calculateNA(student) >= schoolSettings.kktp ? 'Tuntas' : 'Belum Tuntas' }}
+                                                </span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-center">
+                                                <button @click="openEditGradeModal(student)" class="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition" title="Edit Nilai">
+                                                    <i class="fas fa-pen-to-square"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="paginatedStudents.length === 0">
+                                            <td colspan="18" class="py-12 text-center text-slate-400">
+                                                <i class="fas fa-file-excel text-3xl mb-2 text-slate-300 block"></i>
+                                                <span>Belum ada data siswa. Silakan upload file Excel atau unduh template di menu <b>Data Siswa</b>.</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: DATA SISWA -->
+                    <div v-if="activeTab === 'students'" class="space-y-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="relative flex-1 max-w-md">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input v-model="searchQuery" type="text" placeholder="Cari Nama Siswa atau NISN..." 
+                                       class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button @click="downloadExcelTemplate" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-300">
+                                    <i class="fas fa-download"></i> Template Excel
+                                </button>
+                                <label class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                    <i class="fas fa-file-excel"></i> Upload Data (.xls / .xlsx)
+                                    <input type="file" accept=".xls,.xlsx" @change="handleFileUpload" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto custom-scrollbar">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 text-slate-600 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-3.5 px-4 text-center w-16">No</th>
+                                            <th class="py-3.5 px-4">Nama Siswa</th>
+                                            <th class="py-3.5 px-4 w-40">NISN</th>
+                                            <th class="py-3.5 px-4 text-center w-32">Kelas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs font-medium">
+                                        <tr v-for="(student, idx) in paginatedStudents" :key="student.id" class="hover:bg-slate-50 transition">
+                                            <td class="py-3 px-4 text-center text-slate-400 font-bold">
+                                                {{ (currentPage - 1) * pageSize + idx + 1 }}
+                                            </td>
+                                            <td class="py-3 px-4 font-bold text-slate-800">{{ student.name }}</td>
+                                            <td class="py-3 px-4 font-mono text-slate-600">{{ student.nisn }}</td>
+                                            <td class="py-3 px-4 text-center">
+                                                <span class="px-2.5 py-1 bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200">{{ student.class }}</span>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="paginatedStudents.length === 0">
+                                            <td colspan="4" class="py-12 text-center text-slate-400">
+                                                <i class="fas fa-users-slash text-3xl mb-2 text-slate-300 block"></i>
+                                                <span>Belum ada data siswa. Silakan unggah file Excel melalui tombol di atas.</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 5: PENGATURAN -->
+                    <div v-if="activeTab === 'settings'" class="max-w-4xl space-y-6">
+                        <!-- Profile Settings -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-user-shield text-brand-600"></i> Profil Administrator
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Admin</label>
+                                    <input v-model="adminProfile.name" type="text" class="w-full p-2.5 text-xs border rounded-xl focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
+                                    <input v-model="adminProfile.username" type="text" class="w-full p-2.5 text-xs border rounded-xl focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Ubah Password</label>
+                                    <input v-model="adminProfile.password" type="text" class="w-full p-2.5 text-xs border rounded-xl focus:ring-2 focus:ring-brand-500 font-mono">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Settings -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-sliders-h text-brand-600"></i> Pengaturan Kriteria & Rumus Nilai
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Tahun Pelajaran</label>
+                                    <input v-model="schoolSettings.academicYear" type="text" class="w-full p-2.5 text-xs border rounded-xl focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Semester</label>
+                                    <select v-model="schoolSettings.semester" class="w-full p-2.5 text-xs border rounded-xl focus:ring-2 focus:ring-brand-500">
+                                        <option value="Ganjil">Ganjil</option>
+                                        <option value="Genap">Genap</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-slate-100 pt-4">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Batas KKTP (Kriteria Ketercapaian Tujuan Pembelajaran)</label>
+                                <input v-model.number="schoolSettings.kktp" type="number" min="0" max="100" class="w-32 p-2.5 text-xs border rounded-xl focus:ring-2 focus:ring-brand-500 font-bold">
+                            </div>
+
+                            <div class="mt-6 border-t border-slate-100 pt-4">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Bobot Rumus Nilai Akhir (NA)</h4>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Bobot Rata-rata Tugas (%)</label>
+                                        <input v-model.number="schoolSettings.weightTugas" type="number" class="w-full p-2 text-xs border rounded-xl text-center font-bold">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Bobot UTS (%)</label>
+                                        <input v-model.number="schoolSettings.weightUTS" type="number" class="w-full p-2 text-xs border rounded-xl text-center font-bold">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Bobot UAS (%)</label>
+                                        <input v-model.number="schoolSettings.weightUAS" type="number" class="w-full p-2 text-xs border rounded-xl text-center font-bold">
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-2">
+                                    Total bobot: <span class="font-bold text-slate-700">{{ schoolSettings.weightTugas + schoolSettings.weightUTS + schoolSettings.weightUAS }}%</span>
+                                </p>
+                            </div>
+
+                            <div class="mt-6">
+                                <button @click="showToast('Pengaturan Berhasil Disimpan!')" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl transition shadow-md">
+                                    <i class="fas fa-save mr-1"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 6: BACKUP & RESTORE -->
+                    <div v-if="activeTab === 'backup'" class="max-w-2xl space-y-6">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                    <i class="fas fa-database text-brand-600"></i> Backup & Restore Data System
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-1">Unduh cadangan data lengkap, ekspor laporan Excel, atau pulihkan dari file JSON yang telah dibackup sebelumnya.</p>
+                            </div>
+
+                            <!-- Fitur Eksport Excel Laporan Kehadiran & Nilai -->
+                            <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                                        <i class="fas fa-file-excel text-emerald-600"></i> Ekspor Laporan Excel (.xls / .xlsx)
+                                    </h4>
+                                    <p class="text-[11px] text-emerald-700 mt-0.5">Unduh rekapitulasi jumlah kehadiran dan daftar nilai siswa ke dalam lembar kerja Excel.</p>
+                                </div>
+                                <button @click="exportExcelReport" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center gap-1.5">
+                                    <i class="fas fa-file-export"></i> Ekspor Excel
+                                </button>
+                            </div>
+
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-800">Ekspor Cadangan Data (Backup)</h4>
+                                    <p class="text-[11px] text-slate-500">Unduh seluruh data presensi, nilai, dan pengaturan.</p>
+                                </div>
+                                <button @click="exportDataJSON" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition shadow-sm">
+                                    <i class="fas fa-download mr-1"></i> Unduh JSON
+                                </button>
+                            </div>
+
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-800">Impor Restore Data</h4>
+                                    <p class="text-[11px] text-slate-500">Unggah file backup .json untuk memulihkan data.</p>
+                                </div>
+                                <label class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm">
+                                    <i class="fas fa-upload mr-1"></i> Pilih File
+                                    <input type="file" accept=".json" @change="importDataJSON" class="hidden">
+                                </label>
+                            </div>
+
+                            <div class="border-t border-slate-100 pt-4">
+                                <button @click="resetToDefaultData" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-200 transition">
+                                    <i class="fas fa-redo-alt mr-1"></i> Reset Ke Data Awal Sistem
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </main>
+            </div>
+        </div>
+
+        <!-- MODAL EDIT NILAI -->
+        <div v-if="editingStudent" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <div class="flex items-center justify-between border-b pb-3">
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-sm">Edit Nilai Siswa</h3>
+                        <p class="text-xs text-slate-500 font-bold">{{ editingStudent.name }} (Kelas {{ editingStudent.class }})</p>
+                    </div>
+                    <button @click="editingStudent = null" class="text-slate-400 hover:text-slate-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-brand-600 uppercase tracking-wider">10 Nilai Tugas</h4>
+                    <div class="grid grid-cols-5 gap-2">
+                        <div v-for="(val, idx) in editingStudent.tugas" :key="idx">
+                            <label class="block text-[10px] font-bold text-slate-500 text-center mb-0.5">T{{ idx + 1 }}</label>
+                            <input v-model.number="editingStudent.tugas[idx]" type="number" min="0" max="100" 
+                                   class="w-full text-center p-1.5 border rounded-lg text-xs font-bold focus:ring-2 focus:ring-brand-500">
+                        </div>
+                    </div>
+
+                    <h4 class="text-xs font-bold text-brand-600 uppercase tracking-wider pt-2 border-t">Nilai Ujian</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Nilai UTS</label>
+                            <input v-model.number="editingStudent.uts" type="number" min="0" max="100" 
+                                   class="w-full p-2 border rounded-xl text-xs font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Nilai UAS</label>
+                            <input v-model.number="editingStudent.uas" type="number" min="0" max="100" 
+                                   class="w-full p-2 border rounded-xl text-xs font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t">
+                    <button @click="editingStudent = null" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl">Batal</button>
+                    <button @click="saveStudentGrade" class="px-4 py-2 bg-brand-600 text-white text-xs font-bold rounded-xl">Simpan Nilai</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const isLoggedIn = ref(false);
+                const showPassword = ref(false);
+                const loginError = ref('');
+                const loginForm = ref({ username: '', password: '' });
+
+                const activeTab = ref('dashboard');
+                const isSidebarCollapsed = ref(false);
+                const isMobileMenuOpen = ref(false);
+
+                // Admin & School Settings
+                const adminProfile = ref({
+                    name: 'Administrator Guru',
+                    username: 'Admin',
+                    password: 'Agus@123'
+                });
+
+                const schoolSettings = ref({
+                    schoolName: 'SMPN 1 Banyuasin III',
+                    academicYear: '2023/2024',
+                    semester: 'Ganjil',
+                    kktp: 75,
+                    weightTugas: 30,
+                    weightUTS: 30,
+                    weightUAS: 40
+                });
+
+                const menuItems = [
+                    { id: 'dashboard', label: 'Dasbor', icon: 'fas fa-chart-pie' },
+                    { id: 'attendance', label: 'Daftar Kehadiran', icon: 'fas fa-calendar-check' },
+                    { id: 'grades', label: 'Daftar Nilai', icon: 'fas fa-file-invoice' },
+                    { id: 'students', label: 'Data Siswa', icon: 'fas fa-users-viewfinder' },
+                    { id: 'settings', label: 'Pengaturan', icon: 'fas fa-sliders-h' },
+                    { id: 'backup', label: 'Backup & Restore', icon: 'fas fa-database' }
+                ];
+
+                const classes = ['IX.A', 'IX.B', 'IX.C', 'IX.D', 'IX.E', 'IX.F', 'IX.G', 'IX.H'];
+                const selectedClass = ref('ALL');
+                const searchQuery = ref('');
+                const currentPage = ref(1);
+                const attendanceCurrentPage = ref(1);
+                const dashCurrentPage = ref(1);
+                const pageSize = ref(36);
+                const attendancePageSize = ref(36);
+                const dashPageSize = ref(10);
+
+                const selectedAttendanceDate = ref(new Date().toISOString().slice(0, 10));
+                const toastMessage = ref('');
+                const editingStudent = ref(null);
+
+                // Chart instances
+                let gradeChartInstance = null;
+                let attendanceChartInstance = null;
+
+                const students = ref([]);
+
+                // Reset pagination on search or class filter
+                watch([selectedClass, searchQuery], () => {
+                    currentPage.value = 1;
+                    attendanceCurrentPage.value = 1;
+                    dashCurrentPage.value = 1;
+                });
+
+                const currentTabTitle = computed(() => {
+                    const found = menuItems.find(m => m.id === activeTab.value);
+                    return found ? found.label : 'Dasbor';
+                });
+
+                const filteredStudents = computed(() => {
+                    return students.value.filter(s => {
+                        const matchClass = selectedClass.value === 'ALL' || s.class === selectedClass.value;
+                        const q = searchQuery.value.toLowerCase().trim();
+                        const matchQuery = !q || s.name.toLowerCase().includes(q) || s.nisn.includes(q);
+                        return matchClass && matchQuery;
+                    });
+                });
+
+                const totalStudents = computed(() => students.value.length);
+
+                const paginatedStudents = computed(() => {
+                    const start = (currentPage.value - 1) * pageSize.value;
+                    return filteredStudents.value.slice(start, start + pageSize.value);
+                });
+
+                const paginatedAttendanceStudents = computed(() => {
+                    const start = (attendanceCurrentPage.value - 1) * attendancePageSize.value;
+                    return filteredStudents.value.slice(start, start + attendancePageSize.value);
+                });
+
+                const paginatedDashStudents = computed(() => {
+                    const start = (dashCurrentPage.value - 1) * dashPageSize.value;
+                    return filteredStudents.value.slice(start, start + dashPageSize.value);
+                });
+
+                // Calculation logic
+                const calculateAvgTugas = (tugasArr) => {
+                    if (!tugasArr || !tugasArr.length) return 0;
+                    const sum = tugasArr.reduce((a, b) => a + Number(b || 0), 0);
+                    return Math.round(sum / tugasArr.length);
+                };
+
+                const calculateNA = (student) => {
+                    if (!student) return 0;
+                    const avgTugas = calculateAvgTugas(student.tugas);
+                    const wTugas = schoolSettings.value.weightTugas / 100;
+                    const wUTS = schoolSettings.value.weightUTS / 100;
+                    const wUAS = schoolSettings.value.weightUAS / 100;
+                    const na = (avgTugas * wTugas) + ((student.uts || 0) * wUTS) + ((student.uas || 0) * wUAS);
+                    return Math.round(na);
+                };
+
+                const passedCount = computed(() => {
+                    return filteredStudents.value.filter(s => calculateNA(s) >= schoolSettings.value.kktp).length;
+                });
+
+                const overallAverageGrade = computed(() => {
+                    if (!filteredStudents.value.length) return 0;
+                    const total = filteredStudents.value.reduce((acc, s) => acc + calculateNA(s), 0);
+                    return Math.round(total / filteredStudents.value.length);
+                });
+
+                const overallAttendanceRate = computed(() => {
+                    if (!filteredStudents.value.length) return 0;
+                    const date = selectedAttendanceDate.value;
+                    let present = 0;
+                    filteredStudents.value.forEach(s => {
+                        if (getAttendanceStatus(s, date) === 'H') present++;
+                    });
+                    return Math.round((present / filteredStudents.value.length) * 100);
+                });
+
+                const getStudentAttendanceCounts = (student) => {
+                    if (!student || !student.attendanceRecords) return { h: 0, s: 0, i: 0, a: 0, total: 0, percentage: 0 };
+                    const records = Object.values(student.attendanceRecords);
+                    if (!records.length) return { h: 0, s: 0, i: 0, a: 0, total: 0, percentage: 0 };
+                    let h = 0, s = 0, i = 0, a = 0;
+                    records.forEach(r => {
+                        if (r === 'H') h++;
+                        else if (r === 'S') s++;
+                        else if (r === 'I') i++;
+                        else if (r === 'A') a++;
+                    });
+                    const total = records.length;
+                    const percentage = Math.round((h / total) * 100);
+                    return { h, s, i, a, total, percentage };
+                };
+
+                // Attendance Functions
+                const getAttendanceStatus = (student, date) => {
+                    return (student.attendanceRecords && student.attendanceRecords[date]) || 'H';
+                };
+
+                const setAttendanceStatus = (student, date, status) => {
+                    if (!student.attendanceRecords) student.attendanceRecords = {};
+                    student.attendanceRecords[date] = status;
+                };
+
+                const markAllPresent = () => {
+                    const date = selectedAttendanceDate.value;
+                    filteredStudents.value.forEach(s => {
+                        if (!s.attendanceRecords) s.attendanceRecords = {};
+                        s.attendanceRecords[date] = 'H';
+                    });
+                    showToast(`Semua siswa di ${selectedClass.value === 'ALL' ? 'semua kelas' : 'Kelas ' + selectedClass.value} ditandai Hadir!`);
+                };
+
+                const statusColorClass = (status) => {
+                    switch (status) {
+                        case 'H': return 'bg-emerald-500 text-white';
+                        case 'S': return 'bg-amber-500 text-white';
+                        case 'I': return 'bg-blue-500 text-white';
+                        case 'A': return 'bg-rose-500 text-white';
+                        default: return 'bg-slate-200 text-slate-700';
+                    }
+                };
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const parts = dateStr.split('-');
+                    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    return dateStr;
+                };
+
+                const renderCharts = () => {
+                    nextTick(() => {
+                        const gradeCtx = document.getElementById('gradeDistributionChart');
+                        if (gradeCtx) {
+                            if (gradeChartInstance) gradeChartInstance.destroy();
+                            const passed = passedCount.value;
+                            const failed = filteredStudents.value.length - passed;
+
+                            gradeChartInstance = new Chart(gradeCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: ['Tuntas KKTP', 'Belum Tuntas'],
+                                    datasets: [{
+                                        data: [passed, failed],
+                                        backgroundColor: ['#4f46e5', '#f43f5e'],
+                                        borderWidth: 0
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { position: 'bottom' } }
+                                }
+                            });
+                        }
+
+                        const attCtx = document.getElementById('attendanceChart');
+                        if (attCtx) {
+                            if (attendanceChartInstance) attendanceChartInstance.destroy();
+                            const date = selectedAttendanceDate.value;
+                            let h = 0, s = 0, i = 0, a = 0;
+                            filteredStudents.value.forEach(st => {
+                                const stt = getAttendanceStatus(st, date);
+                                if (stt === 'H') h++;
+                                else if (stt === 'S') s++;
+                                else if (stt === 'I') i++;
+                                else if (stt === 'A') a++;
+                            });
+
+                            attendanceChartInstance = new Chart(attCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
+                                    datasets: [{
+                                        label: 'Jumlah Siswa',
+                                        data: [h, s, i, a],
+                                        backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#f43f5e'],
+                                        borderRadius: 8
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: { y: { beginAtZero: true, ticks: { stepSize: 5 } } }
+                                }
+                            });
+                        }
+                    });
+                };
+
+                watch(activeTab, (newTab) => {
+                    if (newTab === 'dashboard') renderCharts();
+                });
+
+                watch([filteredStudents, selectedAttendanceDate], () => {
+                    if (activeTab.value === 'dashboard') renderCharts();
+                });
+
+                const showToast = (msg) => {
+                    toastMessage.value = msg;
+                    setTimeout(() => { toastMessage.value = ''; }, 3000);
+                };
+
+                const handleLogin = () => {
+                    if (loginForm.value.username === adminProfile.value.username && 
+                        loginForm.value.password === adminProfile.value.password) {
+                        isLoggedIn.value = true;
+                        loginError.value = '';
+                        showToast('Berhasil masuk ke ADM GURUKU!');
+                        renderCharts();
+                    } else {
+                        loginError.value = 'Username atau Password salah! Periksa kembali data login Anda.';
+                    }
+                };
+
+                const handleLogout = () => {
+                    isLoggedIn.value = false;
+                    loginForm.value = { username: '', password: '' };
+                };
+
+                const openEditGradeModal = (student) => {
+                    editingStudent.value = JSON.parse(JSON.stringify(student));
+                };
+
+                const saveStudentGrade = () => {
+                    const idx = students.value.findIndex(s => s.id === editingStudent.value.id);
+                    if (idx !== -1) {
+                        students.value[idx] = editingStudent.value;
+                        showToast('Nilai siswa berhasil diperbarui!');
+                    }
+                    editingStudent.value = null;
+                };
+
+                const downloadExcelTemplate = () => {
+                    const templateData = [
+                        { "NISN": "0081234567", "Nama Siswa": "Ahmad Subagyo", "Kelas": "IX.A" },
+                        { "NISN": "0087654321", "Nama Siswa": "Siti Nurhaliza", "Kelas": "IX.A" }
+                    ];
+                    const ws = XLSX.utils.json_to_sheet(templateData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Template Data Siswa");
+                    XLSX.writeFile(wb, "Template_Data_Siswa_ADM_GURUKU.xlsx");
+                };
+
+                const handleFileUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(worksheet);
+
+                            if (json && json.length > 0) {
+                                let importedCount = 0;
+                                json.forEach((row, i) => {
+                                    const nisn = String(row["NISN"] || row["nisn"] || '008' + Math.floor(10000000 + Math.random() * 90000000));
+                                    const name = row["Nama Siswa"] || row["Nama"] || row["nama"] || `Siswa Baru ${i+1}`;
+                                    const studentClass = row["Kelas"] || row["kelas"] || "IX.A";
+
+                                    students.value.unshift({
+                                        id: Date.now() + i,
+                                        nisn: nisn,
+                                        name: name,
+                                        class: studentClass,
+                                        tugas: Array.from({ length: 10 }, () => 80),
+                                        uts: 80,
+                                        uas: 80,
+                                        attendanceRecords: {}
+                                    });
+                                    importedCount++;
+                                });
+                                showToast(`Berhasil mengunggah ${importedCount} data siswa baru!`);
+                            } else {
+                                showToast('File Excel kosong atau format kolom tidak sesuai.');
+                            }
+                        } catch (err) {
+                            showToast('Gagal membaca file Excel. Pastikan format file .xls atau .xlsx valid.');
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+
+                const exportDataJSON = () => {
+                    const backupObj = {
+                        schoolSettings: schoolSettings.value,
+                        adminProfile: adminProfile.value,
+                        students: students.value,
+                        exportDate: new Date().toISOString()
+                    };
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+                    const dlAnchorElem = document.createElement('a');
+                    dlAnchorElem.setAttribute("href", dataStr);
+                    dlAnchorElem.setAttribute("download", `Backup_ADM_GURUKU_${new Date().toISOString().slice(0, 10)}.json`);
+                    dlAnchorElem.click();
+                    showToast('Backup data JSON berhasil diunduh!');
+                };
+
+                const exportExcelReport = () => {
+                    if (!filteredStudents.value || !filteredStudents.value.length) {
+                        showToast('Tidak ada data siswa untuk diekspor!');
+                        return;
+                    }
+
+                    const attendanceData = filteredStudents.value.map((s, idx) => {
+                        const counts = getStudentAttendanceCounts(s);
+                        return {
+                            "No": idx + 1,
+                            "NISN": s.nisn,
+                            "Nama Siswa": s.name,
+                            "Kelas": s.class,
+                            "Hadir (H)": counts.h,
+                            "Sakit (S)": counts.s,
+                            "Izin (I)": counts.i,
+                            "Alpa (A)": counts.a,
+                            "Persentase Kehadiran (%)": counts.percentage + '%'
+                        };
+                    });
+
+                    const gradesData = filteredStudents.value.map((s, idx) => {
+                        const row = {
+                            "No": idx + 1,
+                            "NISN": s.nisn,
+                            "Nama Siswa": s.name,
+                            "Kelas": s.class
+                        };
+
+                        if (s.tugas && Array.isArray(s.tugas)) {
+                            s.tugas.forEach((val, tIdx) => {
+                                row[`T${tIdx + 1}`] = val;
+                            });
+                        }
+
+                        const avgTugas = calculateAvgTugas(s.tugas);
+                        const na = calculateNA(s);
+                        const statusKKTP = na >= schoolSettings.value.kktp ? 'Tuntas' : 'Belum Tuntas';
+
+                        row["Rata-Rata Tugas"] = avgTugas;
+                        row["UTS"] = s.uts;
+                        row["UAS"] = s.uas;
+                        row["Nilai Akhir (NA)"] = na;
+                        row["Status KKTP"] = statusKKTP;
+
+                        return row;
+                    });
+
+                    const wb = XLSX.utils.book_new();
+                    const wsAttendance = XLSX.utils.json_to_sheet(attendanceData);
+                    const wsGrades = XLSX.utils.json_to_sheet(gradesData);
+
+                    XLSX.utils.book_append_sheet(wb, wsAttendance, "Rekap Kehadiran");
+                    XLSX.utils.book_append_sheet(wb, wsGrades, "Daftar Nilai");
+
+                    const dateStr = new Date().toISOString().slice(0, 10);
+                    const classTag = selectedClass.value === 'ALL' ? 'Semua_Kelas' : `Kelas_${selectedClass.value}`;
+                    XLSX.writeFile(wb, `Laporan_Rekap_ADM_GURUKU_${classTag}_${dateStr}.xlsx`);
+                    
+                    showToast('Laporan Rekap Kehadiran & Nilai berhasil diekspor ke Excel!');
+                };
+
+                const importDataJSON = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const parsed = JSON.parse(e.target.result);
+                            if (parsed.students && Array.isArray(parsed.students)) {
+                                students.value = parsed.students;
+                                if (parsed.schoolSettings) schoolSettings.value = parsed.schoolSettings;
+                                if (parsed.adminProfile) adminProfile.value = parsed.adminProfile;
+                                showToast('Data berhasil dipulihkan (Restore Sukses)!');
+                                renderCharts();
+                            } else {
+                                showToast('File backup JSON tidak valid.');
+                            }
+                        } catch (err) {
+                            showToast('Format JSON salah atau file rusak.');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+
+                const resetToDefaultData = () => {
+                    students.value = [];
+                    showToast('Data sistem telah direset ke kondisi awal.');
+                    renderCharts();
+                };
+
+                onMounted(() => {
+                    renderCharts();
+                });
+
+                return {
+                    isLoggedIn,
+                    showPassword,
+                    loginError,
+                    loginForm,
+                    activeTab,
+                    isSidebarCollapsed,
+                    isMobileMenuOpen,
+                    adminProfile,
+                    schoolSettings,
+                    menuItems,
+                    classes,
+                    selectedClass,
+                    searchQuery,
+                    currentPage,
+                    attendanceCurrentPage,
+                    dashCurrentPage,
+                    pageSize,
+                    attendancePageSize,
+                    dashPageSize,
+                    selectedAttendanceDate,
+                    toastMessage,
+                    editingStudent,
+                    currentTabTitle,
+                    filteredStudents,
+                    totalStudents,
+                    paginatedStudents,
+                    paginatedAttendanceStudents,
+                    paginatedDashStudents,
+                    calculateAvgTugas,
+                    calculateNA,
+                    passedCount,
+                    overallAverageGrade,
+                    overallAttendanceRate,
+                    getStudentAttendanceCounts,
+                    getAttendanceStatus,
+                    setAttendanceStatus,
+                    markAllPresent,
+                    statusColorClass,
+                    formatDate,
+                    showToast,
+                    handleLogin,
+                    handleLogout,
+                    openEditGradeModal,
+                    saveStudentGrade,
+                    downloadExcelTemplate,
+                    handleFileUpload,
+                    exportDataJSON,
+                    exportExcelReport,
+                    importDataJSON,
+                    resetToDefaultData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
